@@ -4,7 +4,7 @@ use bevy::{
     pbr::wireframe::WireframePlugin,
     prelude::*,
 };
-use heron::{PhysicsPlugin, Gravity};
+use bevy_rapier3d::{plugin::{RapierPhysicsPlugin, NoUserData}, prelude::RapierDebugRenderPlugin};
 use iyes_loopless::prelude::{AppLooplessStateExt, ConditionSet};
 use leafwing_input_manager::plugin::InputManagerPlugin;
 
@@ -22,7 +22,6 @@ pub mod setup;
 fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
-        .insert_resource(Gravity::from(Vec3::new(0., -9.81, 0.)))
         .insert_resource(WindowDescriptor{
             title: "3D ZOMBIES GOLD".to_string(),
             resizable: false,
@@ -30,7 +29,8 @@ fn main() {
         )
 
         .add_plugins(DefaultPlugins)
-        .add_plugin(PhysicsPlugin::default())
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        //.add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(InputManagerPlugin::<actions::Action>::default())
         .add_plugin(WireframePlugin)
 

@@ -1,5 +1,5 @@
 use bevy::{prelude::*, input::mouse::MouseMotion};
-use heron::prelude::*;
+use bevy_rapier3d::prelude::Velocity;
 use leafwing_input_manager::{Actionlike, prelude::ActionState};
 
 const SPEED: f32 = 8.;
@@ -15,6 +15,7 @@ pub fn process_actions(
     mut camera_query: Query<(&mut Transform), (With<Camera>, With<Parent>)>,
     mut query: Query<(&Children, &ActionState<Action>, &mut Velocity, &mut Transform), Without<Camera>>
 ) {
+
     let sensitivity_mult = 0.005;
     let window = windows.get_primary_mut().unwrap();
 
@@ -36,8 +37,7 @@ pub fn process_actions(
 
         
         if action_state.just_pressed(Action::Jump) {
-            println!("boioing");
-            velocity.linear += Vec3::new(0., 5., 0.); 
+            velocity.linvel += Vec3::new(0., 5., 0.); 
         }
 
         let mut direction = Vec3::default();
@@ -56,13 +56,13 @@ pub fn process_actions(
         }
         
         if direction != Vec3::default() {
-            let mut velocity_add = ((direction.normalize_or_zero()*SPEED).lerp(velocity.linear, 0.0) - velocity.linear) * time.delta_seconds();
+            let mut velocity_add = ((direction.normalize_or_zero()*SPEED).lerp(velocity.linvel, 0.0) - velocity.linvel) * time.delta_seconds();
             velocity_add.y = 0.;
-            velocity.linear += velocity_add;
+            velocity.linvel += velocity_add;
         } else {
-            let mut velocity_add = (velocity.linear.lerp(Vec3::default(), 1.0) - velocity.linear) * time.delta_seconds();
+            let mut velocity_add = (velocity.linvel.lerp(Vec3::default(), 1.0) - velocity.linvel) * time.delta_seconds();
             velocity_add.y = 0.;
-            velocity.linear += velocity_add;
+            velocity.linvel += velocity_add;
         }
     }
 }

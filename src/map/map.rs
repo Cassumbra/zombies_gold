@@ -1,19 +1,18 @@
-use bevy::render::mesh::MeshVertexAttribute;
-use block_mesh::ilattice::glam::Vec3A;
-use block_mesh::ndshape::{ConstShape, ConstShape3u32};
-use block_mesh::{
-    greedy_quads, visible_block_faces, GreedyQuadsBuffer, MergeVoxel, UnitQuadBuffer, Voxel, VoxelVisibility,
-    RIGHT_HANDED_Y_UP_CONFIG,
-};
 
 use bevy::{
-    pbr::wireframe::{WireframeConfig, WireframePlugin},
+    pbr::wireframe::{WireframeConfig},
     prelude::*,
     render::{
         mesh::{Indices, VertexAttributeValues},
-        render_resource::{PrimitiveTopology, WgpuFeatures},
+        render_resource::{PrimitiveTopology},
     },
 };
+use bevy_rapier3d::prelude::{Collider, ComputedColliderShape, VHACDParameters, RigidBody};
+use block_mesh::ilattice::glam::Vec3A;
+use block_mesh::ndshape::{ConstShape, ConstShape3u32};
+use block_mesh::{greedy_quads, visible_block_faces, GreedyQuadsBuffer, MergeVoxel, UnitQuadBuffer, Voxel, VoxelVisibility, RIGHT_HANDED_Y_UP_CONFIG};
+
+
 
 
 pub fn map_setup(
@@ -22,38 +21,34 @@ pub fn map_setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    wireframe_config.global = true;
+    wireframe_config.global = false;
 
-    commands.spawn_bundle(PointLightBundle {
-        transform: Transform::from_translation(Vec3::new(25.0, 25.0, 25.0)),
-        point_light: PointLight {
-            range: 200.0,
-            intensity: 8000.0,
-            ..Default::default()
-        },
-        ..Default::default()
-    });
-    //commands.spawn_bundle(PerspectiveCameraBundle {
-    //    transform: Transform::from_translation(Vec3::new(50.0, 15.0, 50.0))
-    //        .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
-    //    ..Default::default()
-    //});
+    //let simple_sphere_handle = generate_simple_mesh(&mut meshes, |p| sphere(0.9, p));
+    let greedy_sphere_handle = generate_greedy_mesh(&mut meshes, |p| sphere(0.9, p));
 
-    let simple_sphere_mesh = generate_simple_mesh(&mut meshes, |p| sphere(0.9, p));
-    let greedy_sphere_mesh = generate_greedy_mesh(&mut meshes, |p| sphere(0.9, p));
+    /*
+    if let Some(simple_sphere_mesh) = meshes.get(simple_sphere_handle.clone()) {
+        spawn_pbr(
+            &mut commands,
+            &mut materials,
+            simple_sphere_handle,
+            simple_sphere_mesh,
+            Transform::from_translation(Vec3::new(8.0, -16.0, -16.0)),
+        );
+    }
+     */
 
-    spawn_pbr(
-        &mut commands,
-        &mut materials,
-        simple_sphere_mesh,
-        Transform::from_translation(Vec3::new(8.0, -16.0, -16.0)),
-    );
-    spawn_pbr(
-        &mut commands,
-        &mut materials,
-        greedy_sphere_mesh,
-        Transform::from_translation(Vec3::new(-16.0, -16.0, 8.0)),
-    );
+    if let Some(greedy_sphere_mesh) = meshes.get(greedy_sphere_handle.clone()) {
+        spawn_pbr(
+            &mut commands,
+            &mut materials,
+            greedy_sphere_handle,
+            greedy_sphere_mesh,
+            Transform::from_translation(Vec3::new(-16.0, -16.0, 8.0)),
+        );
+    }
+     
+
 }
 
 fn generate_simple_mesh(
@@ -149,18 +144,31 @@ fn generate_greedy_mesh(
 fn spawn_pbr(
     commands: &mut Commands,
     materials: &mut Assets<StandardMaterial>,
-    mesh: Handle<Mesh>,
+    mesh_handle: Handle<Mesh>,
+    mesh: &Mesh,
     transform: Transform,
 ) {
     let mut material = StandardMaterial::from(Color::rgb(0.0, 0.0, 0.0));
     material.perceptual_roughness = 0.9;
 
-    commands.spawn_bundle(PbrBundle {
-        mesh,
-        material: materials.add(material),
-        transform,
-        ..Default::default()
-    });
+    if let Some(collider) = Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh) { //ConvexDecomposition(VHACDParameters::default())
+        commands.spawn_bundle(PbrBundle {
+            mesh: mesh_handle,
+            material: materials.add(material),
+            ..Default::default()
+        })
+        .insert(transform)
+        .insert(GlobalTransform::default())
+        //.insert(CollisionShape::Cuboid {
+        //    half_extends: Vec3::new(10.5, 0.1, 10.5),
+        //    border_radius: None,
+        //})
+        .insert(collider)
+        .insert(RigidBody::Fixed);
+        //.insert(CollisionLayers::default());
+    }
+
+
 }
 
 fn into_domain(array_dim: u32, [x, y, z]: [u32; 3]) -> Vec3A {

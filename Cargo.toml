@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 # Remove "dynamic" after any releases or include libbevy_dylib
-bevy = { version = "0.7.0", features = ["dynamic", "bevy_winit", "render", "png", "x11"] }
+bevy = { version = "0.7.0", features = ["dynamic", "bevy_winit", "render", "png", "x11", "trace_tracy"] }
 #bevy = { version = "0.7.0" }
-heron = { version = "3.0.0", features = ["3d", "collision-from-mesh"] }
+bevy_rapier3d = "0.14.1"
 
 leafwing-input-manager = "0.3.0"
 iyes_loopless = "0.5.1"

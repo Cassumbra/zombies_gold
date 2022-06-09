@@ -1,5 +1,5 @@
 use bevy::{prelude::*};
-use heron::{prelude::*, PendingConvexCollision};
+use bevy_rapier3d::prelude::{RigidBody, Velocity, LockedAxes, Collider};
 use iyes_loopless::state::NextState;
 use leafwing_input_manager::prelude::*;
 
@@ -37,17 +37,14 @@ pub fn spawn_actors (
         })
         
         .insert(GlobalTransform::identity())
+        .insert(Collider::capsule(Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, PLAYER_HEIGHT, 0.0), 0.2))
         .insert(RigidBody::Dynamic)
         .insert(Velocity::default())
-        .insert(RotationConstraints {
-            allow_x: false,
-            allow_y: false,
-            allow_z: false,
-        })
-        .insert(CollisionShape::Capsule {
-            radius: 0.2,
-            half_segment: PLAYER_HEIGHT / 2.0,
-        })
+        .insert(LockedAxes::ROTATION_LOCKED)
+        //.insert(CollisionShape::Capsule {
+        //    radius: 0.2,
+        //    half_segment: PLAYER_HEIGHT / 2.0,
+        //})
         // Camera
         .with_children(|c| {
             c.spawn_bundle(PerspectiveCameraBundle::new_3d())
@@ -68,6 +65,8 @@ pub fn spawn_actors (
                 ..default()
             });
         });
+
+    println!("wauw");
 
     commands.insert_resource(NextState(GameState::Playing));
 }
