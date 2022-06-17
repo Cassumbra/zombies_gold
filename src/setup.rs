@@ -14,9 +14,7 @@ pub fn spawn_actors (
     mut commands: Commands,
 ) {
     println!("Spawning actors");
-    //    transform: Transform::from_translation(Vec3::new(50.0, 15.0, 50.0))
-    //        .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
-    let spawn_pos = Vec3::new(8.0, -16.0, -16.0);
+    let spawn_pos = Vec3::new(8.0, 0.0, 0.0);
 
     // Player
     commands

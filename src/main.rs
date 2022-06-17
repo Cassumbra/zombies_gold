@@ -7,6 +7,7 @@ use bevy::{
 use bevy_rapier3d::{plugin::{RapierPhysicsPlugin, NoUserData}, prelude::RapierDebugRenderPlugin};
 use iyes_loopless::prelude::{AppLooplessStateExt, ConditionSet};
 use leafwing_input_manager::plugin::InputManagerPlugin;
+use bevy_inspector_egui::WorldInspectorPlugin;
 
 
 #[path = "map/map.rs"]
@@ -33,6 +34,9 @@ fn main() {
         //.add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(InputManagerPlugin::<actions::Action>::default())
         .add_plugin(WireframePlugin)
+        .add_plugin(WorldInspectorPlugin::new())
+
+        .add_plugin(map::MapPlugin)
 
         //.add_loopless_state(GameState::Loading)
 
@@ -40,6 +44,8 @@ fn main() {
 
         .add_startup_system(setup::spawn_actors)
         .add_startup_system(map::map_setup)
+
+        .add_system(map::set_block_chunk)
 
         .add_system_set(
             ConditionSet::new()

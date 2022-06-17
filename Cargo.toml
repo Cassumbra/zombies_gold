@@ -10,12 +10,14 @@ edition = "2021"
 bevy = { version = "0.7.0", features = ["dynamic", "bevy_winit", "render", "png", "x11", "trace_tracy"] }
 #bevy = { version = "0.7.0" }
 bevy_rapier3d = "0.14.1"
+bevy-inspector-egui = "0.11.0"
 
 leafwing-input-manager = "0.3.0"
 iyes_loopless = "0.5.1"
 
 block-mesh = "0.2.0"
-grid-tree = "0.1.0"
 
-ndshape = "0.3.0"
 ndcopy = "0.3.0"
+ndarray = "0.15.4"
+
+enum-map = "2.1.0"
