@@ -91,9 +91,6 @@ fn generate_greedy_mesh(
     chunk: &Array3<Block>,
 ) -> Handle<Mesh> {
     type SampleShape = ConstShape3u32<{ CHUNK_WIDTH as u32 + 2 }, { CHUNK_HEIGHT as u32 + 2 }, { CHUNK_LENGTH as u32 + 2 }>;
-
-    
-    //let mut samples = [Block::new(BlockType::Air); SampleShape::SIZE as usize];
     
     let mut samples = Array::from_elem((CHUNK_WIDTH + 2, CHUNK_HEIGHT + 2, CHUNK_LENGTH + 2), Block::new(BlockType::Air));
 
@@ -101,18 +98,6 @@ fn generate_greedy_mesh(
         samples[(x + 1, y + 1, z + 1)] = *block;
     }
     
-    //println!("{:?}", samples.as_slice().unwrap());
-
-    //for i in 0u32..(SampleShape::SIZE) {
-    //    let index = SampleShape::delinearize(i);
-        
-        //let p = into_domain(16, SampleShape::delinearize(i));
-        //samples[i as usize] = chunk[bevy::math::Vec3A::from()];
-    //}
-    
-
-    //let mut samples = chunk.as_slice().unwrap();
-    //samples = [[], samples, []]
 
     let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
 
@@ -125,8 +110,6 @@ fn generate_greedy_mesh(
         &faces,
         &mut buffer,
     );
-
-    println!("{:?}", buffer.quads.num_quads());
 
     let num_indices = buffer.quads.num_quads() * 6;
     let num_vertices = buffer.quads.num_quads() * 4;
