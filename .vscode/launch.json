@@ -1,0 +1,49 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "env": {
+        "CARGO_MANIFEST_DIR": "${workspaceFolder}",
+        "PATH": "${env:USERPROFILE}/.rustup/toolchains/nightly-x86_64-pc-windows-msvc/bin;${workspaceFolder}/target/debug/deps;${env:PATH}",
+      },
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'zombies_gold'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=zombies_gold",
+                    "--package=zombies_gold"
+                ],
+                "filter": {
+                    "name": "zombies_gold",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'zombies_gold'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=zombies_gold",
+                    "--package=zombies_gold"
+                ],
+                "filter": {
+                    "name": "zombies_gold",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

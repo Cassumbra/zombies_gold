@@ -203,8 +203,8 @@ impl Default for BlockType {
 impl BlockType {
     pub fn visibility(&self) -> VoxelVisibility {
         match self {
-            Air => {VoxelVisibility::Empty}
-            Dirt => {VoxelVisibility::Opaque}
+            BlockType::Air => {VoxelVisibility::Empty}
+            BlockType::Dirt => {VoxelVisibility::Opaque}
 
             _ => {VoxelVisibility::Opaque}
         }
@@ -278,7 +278,7 @@ impl LoadedChunks {
                 ..default()
             })
             .insert(Transform {
-                translation: index.as_vec3(),
+                translation: IVec3::new(CHUNK_WIDTH as i32 * index.x, CHUNK_HEIGHT as i32 * index.y, CHUNK_LENGTH as i32 * index.z).as_vec3(),
                 //translation: Vec3::new(0.0, 0.0, 0.0),
                 ..default()
             })
