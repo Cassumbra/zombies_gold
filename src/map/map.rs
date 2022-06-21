@@ -8,6 +8,7 @@ use enum_map::{EnumMap, Enum};
 use ndarray::{Array3, Shape, Dim, Array};
 use block_mesh::ndshape::{ConstShape, ConstShape3u32, ConstShape3usize};
 use block_mesh::{greedy_quads, visible_block_faces, GreedyQuadsBuffer, MergeVoxel, UnitQuadBuffer, Voxel, VoxelVisibility, RIGHT_HANDED_Y_UP_CONFIG};
+use ndcopy::{copy3, fill3};
 
 
 // Consts
@@ -46,10 +47,17 @@ pub fn map_setup (
     //create a 64x16x64 grid of blocks
     //save this to a chunks resource thingy.
     let dirt = Block::new(BlockType::Dirt);
+    let air = Block::new(BlockType::Air);
 
     for x in -2..2 {
         for z in -2..2 {
-            ev_set_block.send(SetBlockEvent { shape: SetBlockShape::Chunk(IVec3::new(x, 0, z)), block: dirt })
+            for y in -2..2 {
+                if y == -2 {
+                    ev_set_block.send(SetBlockEvent { shape: SetBlockShape::Chunk(IVec3::new(x, y, z)), block: dirt })
+                } else {
+                    ev_set_block.send(SetBlockEvent { shape: SetBlockShape::Chunk(IVec3::new(x, y, z)), block: air })
+                }
+            }
         }
     }
     
@@ -69,7 +77,7 @@ pub fn set_block_chunk (
     for ev in ev_set_block_chunk.iter() {
         match ev.shape {
             SetBlockShape::Chunk(location) => {
-                chunks.set_block_chunk(location, ev.block, &mut commands, &mut meshes, &mut materials);
+                chunks.set_block_chunk(location, ev.block, &mut commands);
             }
 
             _ => {
@@ -84,26 +92,126 @@ pub fn set_block_chunk (
     }
 }
 
+pub fn lazy_mesher (
+    mut chunks: ResMut<LoadedChunks>,
+
+    mut ev_set_block_chunk: EventReader<SetBlockEvent>,
+
+    mut commands: Commands,
+
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    if ev_set_block_chunk.is_empty() {
+        return;
+    }
+
+    let mut material = StandardMaterial::from(Color::rgb(0.0, 0.0, 0.0));
+    material.perceptual_roughness = 0.9;
+
+    let mut need_mesh = Vec::<IVec3>::new();
+
+    for ev in ev_set_block_chunk.iter() {
+        match ev.shape {
+            SetBlockShape::Block(index) => {
+                let (chunk_index, block_index) = LoadedChunks::index_block(index);
+
+                if !need_mesh.contains(&chunk_index) {need_mesh.push(chunk_index)};
+
+                // TODO: Add adjacent chunks to the vec if needed.
+                //if block_index.x = 
+            }
+            SetBlockShape::Chunk(chunk_index) => {
+                if !need_mesh.contains(&chunk_index) {need_mesh.push(chunk_index)};
+            },
+            
+            _ => {
+                
+            }
+        }
+    }
+
+    for location in need_mesh {
+        println!("GOTTA MESH");
+        if let Some(chunk) = chunks.get(&location) {
+            let mesh = generate_greedy_mesh (&mut meshes, &chunks, location);
+
+            commands.entity(chunk.entity)
+                //.insert_bundle(PbrBundle {
+                //    mesh,
+                //    material: materials.add(material.clone()),
+                //    ..default()
+                //});
+                .insert(mesh)
+                .insert(materials.add(material.clone()));
+        }
+    }
+}
+
 // Helper functions
 // Yoinked from block-mesh example cause I can't be assed.
 fn generate_greedy_mesh(
     meshes: &mut Assets<Mesh>,
-    chunk: &Array3<Block>,
+    chunks: &LoadedChunks,
+    index: IVec3,
 ) -> Handle<Mesh> {
-    type SampleShape = ConstShape3u32<{ CHUNK_WIDTH as u32 + 2 }, { CHUNK_HEIGHT as u32 + 2 }, { CHUNK_LENGTH as u32 + 2 }>;
-    
-    let mut samples = Array::from_elem((CHUNK_WIDTH + 2, CHUNK_HEIGHT + 2, CHUNK_LENGTH + 2), Block::new(BlockType::Air));
 
-    for ((x, y, z), block) in chunk.indexed_iter() {
-        samples[(x + 1, y + 1, z + 1)] = *block;
+    type SampleShape = ConstShape3u32<{ CHUNK_WIDTH as u32 + 2 }, { CHUNK_HEIGHT as u32 + 2 }, { CHUNK_LENGTH as u32 + 2 }>;
+    type ChunkShape = ConstShape3u32<{CHUNK_WIDTH as u32}, {CHUNK_HEIGHT as u32}, {CHUNK_LENGTH as u32}>;
+
+    let mut samples = Array::from_elem((CHUNK_WIDTH + 2, CHUNK_HEIGHT + 2, CHUNK_LENGTH + 2), Block::new(BlockType::Air));
+    let mut samples = samples.as_slice_mut().unwrap();
+
+    copy3(
+        [CHUNK_WIDTH as u32, CHUNK_HEIGHT as u32, CHUNK_LENGTH as u32],
+        chunks[&index].blocks.as_slice().unwrap(),
+        &ChunkShape {},
+        [0, 0, 0],
+        samples,
+        &SampleShape {},
+        [1, 1, 1],
+    );
+
+    let faces = [([1, CHUNK_HEIGHT as u32, CHUNK_LENGTH as u32], IVec3::new(-1, 0, 0), [CHUNK_WIDTH as u32 - 1, 0, 0] , [0, 1, 1])                          ,
+                 ([1, CHUNK_HEIGHT as u32, CHUNK_LENGTH as u32], IVec3::new(1, 0, 0) , [0, 0, 0]                      , [CHUNK_WIDTH as u32 - 1 + 2, 1, 1]) ,
+                 ([CHUNK_WIDTH as u32, 1, CHUNK_LENGTH as u32] , IVec3::new(0, -1, 0), [0, CHUNK_HEIGHT as u32 - 1, 0], [1, 0, 1])                          ,
+                 ([CHUNK_WIDTH as u32, 1, CHUNK_LENGTH as u32] , IVec3::new(0, 1, 0) , [0, 0, 0]                      , [1, CHUNK_HEIGHT as u32 - 1 + 2, 1]),
+                 ([CHUNK_WIDTH as u32, CHUNK_HEIGHT as u32, 1] , IVec3::new(0, 0, -1), [0, 0, CHUNK_LENGTH as u32 - 1], [1, 1, 0])                          ,
+                 ([CHUNK_WIDTH as u32, CHUNK_HEIGHT as u32, 1] , IVec3::new(0, 0, 1) , [0, 0, 0]                      , [1, 1, CHUNK_LENGTH as u32 - 1 + 2]),
+                ];
+
+    for (shape, offset, src_start, dst_start) in faces {
+        if let Some(chunk) = chunks.get(&(index + offset)) {
+            copy3(
+                shape,
+                chunk.blocks.as_slice().unwrap(),
+                &ChunkShape {},
+                src_start,
+                &mut samples,
+                &SampleShape {},
+                dst_start,
+            );
+        }
+        else {
+            println!("INFINIUMMMM");
+
+            let infinium = Block::new(BlockType::Infinium);
+
+            fill3(
+                shape,
+                infinium,
+                &mut samples,
+                &SampleShape {},
+                dst_start,
+            );
+        }
     }
-    
 
     let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
 
     let mut buffer = GreedyQuadsBuffer::new((CHUNK_WIDTH + 2) * (CHUNK_HEIGHT + 2) * (CHUNK_LENGTH + 2));
     greedy_quads(
-        samples.as_slice().unwrap(),
+        samples,
         &SampleShape {},
         [0; 3],
         [CHUNK_WIDTH as u32 + 2 - 1, CHUNK_HEIGHT as u32 + 2 - 1, CHUNK_LENGTH as u32 + 2 - 1],
@@ -192,6 +300,7 @@ impl MergeVoxel for Block {
 
 #[derive(Enum, PartialEq, Eq, Clone, Copy, Debug)]
 pub enum BlockType {
+    Infinium,
     Air,
     Dirt,
 }
@@ -203,6 +312,7 @@ impl Default for BlockType {
 impl BlockType {
     pub fn visibility(&self) -> VoxelVisibility {
         match self {
+            BlockType::Infinium => {VoxelVisibility::Opaque}
             BlockType::Air => {VoxelVisibility::Empty}
             BlockType::Dirt => {VoxelVisibility::Opaque}
 
@@ -220,13 +330,6 @@ impl Chunk {
         Self {blocks, entity}
     }
 }
-/*
-impl Default for Chunk {
-    fn default() -> Self {
-        Self(Array::default((CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_LENGTH)))
-    }
-}
- */
 
 // Resources
 #[derive(Deref, DerefMut, Default)]
@@ -260,10 +363,7 @@ impl LoadedChunks {
     }
 
     
-    pub fn set_block_chunk (&mut self, index: IVec3, block: Block, commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mut Assets<StandardMaterial>,) {
-        let mut material = StandardMaterial::from(Color::rgb(0.0, 0.0, 0.0));
-        material.perceptual_roughness = 0.9;
-
+    pub fn set_block_chunk (&mut self, index: IVec3, block: Block, commands: &mut Commands) {
         if let Some(chunk) = self.get_mut(&index) {
             // Change the blocks of the chunk
             chunk.blocks = Array::from_elem((CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_LENGTH), block);
@@ -271,19 +371,17 @@ impl LoadedChunks {
         else {
             let blocks = Array::from_elem((CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_LENGTH), block);
 
-           let chunk = commands
-            .spawn_bundle(PbrBundle {
-                mesh: generate_greedy_mesh(meshes, &blocks),
-                material: materials.add(material),
-                ..default()
-            })
-            .insert(Transform {
-                translation: IVec3::new(CHUNK_WIDTH as i32 * index.x, CHUNK_HEIGHT as i32 * index.y, CHUNK_LENGTH as i32 * index.z).as_vec3(),
-                //translation: Vec3::new(0.0, 0.0, 0.0),
-                ..default()
-            })
-            .insert(GlobalTransform::identity())
-            .id();
+            let chunk = commands
+                .spawn()
+                .insert(Transform {
+                    translation: IVec3::new(CHUNK_WIDTH as i32 * index.x, CHUNK_HEIGHT as i32 * index.y, CHUNK_LENGTH as i32 * index.z).as_vec3(),
+                    //translation: Vec3::new(0.0, 0.0, 0.0),
+                    ..default()
+                })
+                .insert(GlobalTransform::identity())
+                .insert(Visibility::default())
+                .insert(ComputedVisibility::default())
+                .id();
 
             // Add chunk to loaded chunks
             self.entry(index).insert(Chunk::new(blocks, chunk));
