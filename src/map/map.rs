@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use bevy::math::Vec3A;
+use bevy::math::{Vec3A, const_ivec3};
 use bevy::pbr::wireframe::WireframeConfig;
 use bevy::render::mesh::{PrimitiveTopology, VertexAttributeValues, Indices};
 use bevy::{prelude::*, utils::HashMap};
@@ -16,6 +16,21 @@ const CHUNK_WIDTH: usize = 16;
 const CHUNK_HEIGHT: usize = 16;
 const CHUNK_LENGTH: usize = 16;
 
+const BLOCK_SIDES: [IVec3; 6] = [const_ivec3!([-1, 0, 0]),
+                                 const_ivec3!([1, 0, 0 ]),
+                                 const_ivec3!([0, -1, 0]),
+                                 const_ivec3!([0, 1, 0 ]),
+                                 const_ivec3!([0, 0, -1]),
+                                 const_ivec3!([0, 0, 1 ]),
+                                ];
+
+const CHUNK_SIDES: [usize; 6] = [0,
+                                 CHUNK_WIDTH,
+                                 0,
+                                 CHUNK_HEIGHT,
+                                 0,
+                                 CHUNK_LENGTH,
+                                ];
 
 // Plugin
 #[derive(Default)]
@@ -60,8 +75,16 @@ pub fn map_setup (
             }
         }
     }
-    
+}
 
+pub fn delayed_place_stuff (
+    mut ev_set_block: EventWriter<SetBlockEvent>,
+    time: Res<Time>,
+) {
+    if time.seconds_since_startup() > 5.0 {
+        ev_set_block.send(SetBlockEvent { shape: SetBlockShape::Chunk(IVec3::new(-2, -1, -2)), block: Block::new(BlockType::Dirt) });
+        println!("placing block chunk!");
+    }
 }
 
 pub fn set_block_chunk (
@@ -82,7 +105,7 @@ pub fn set_block_chunk (
 
             _ => {
                 // TODO: add the other match arms lol
-                println!("haha wait shit i wasn't ready");
+                todo!();
             }
 
         }
@@ -118,21 +141,39 @@ pub fn lazy_mesher (
 
                 if !need_mesh.contains(&chunk_index) {need_mesh.push(chunk_index)};
 
+
+                for i in 0..=2 {
+                    if block_index[i] == CHUNK_SIDES[i] {
+                        let modified_index = chunk_index + BLOCK_SIDES[i];
+                        if !need_mesh.contains(&modified_index) {need_mesh.push(modified_index)};
+                    }
+                    else if block_index[i] == CHUNK_SIDES[i+1] {
+                        let modified_index = chunk_index + BLOCK_SIDES[i+1];
+                        if !need_mesh.contains(&modified_index) {need_mesh.push(modified_index)};
+                    }
+                }
+
+                
+
                 // TODO: Add adjacent chunks to the vec if needed.
                 //if block_index.x = 
             }
             SetBlockShape::Chunk(chunk_index) => {
                 if !need_mesh.contains(&chunk_index) {need_mesh.push(chunk_index)};
+
+                for offset in BLOCK_SIDES {
+                    let modified_index = chunk_index + offset;
+                    if !need_mesh.contains(&modified_index) {need_mesh.push(modified_index)};
+                }
             },
             
             _ => {
-                
+                todo!();
             }
         }
     }
 
     for location in need_mesh {
-        println!("GOTTA MESH");
         if let Some(chunk) = chunks.get(&location) {
             let mesh = generate_greedy_mesh (&mut meshes, &chunks, location);
 
@@ -193,7 +234,6 @@ fn generate_greedy_mesh(
             );
         }
         else {
-            println!("INFINIUMMMM");
 
             let infinium = Block::new(BlockType::Infinium);
 

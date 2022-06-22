@@ -49,6 +49,8 @@ fn main() {
 
         .add_system(map::lazy_mesher.after(map::set_block_chunk))
 
+        .add_system(map::delayed_place_stuff)
+
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::Playing)
