@@ -77,16 +77,6 @@ pub fn map_setup (
     }
 }
 
-pub fn delayed_place_stuff (
-    mut ev_set_block: EventWriter<SetBlockEvent>,
-    time: Res<Time>,
-) {
-    if time.seconds_since_startup() > 5.0 {
-        ev_set_block.send(SetBlockEvent { shape: SetBlockShape::Chunk(IVec3::new(-2, -1, -2)), block: Block::new(BlockType::Dirt) });
-        println!("placing block chunk!");
-    }
-}
-
 pub fn set_block_chunk (
     mut chunks: ResMut<LoadedChunks>,
 
@@ -415,7 +405,6 @@ impl LoadedChunks {
                 .spawn()
                 .insert(Transform {
                     translation: IVec3::new(CHUNK_WIDTH as i32 * index.x, CHUNK_HEIGHT as i32 * index.y, CHUNK_LENGTH as i32 * index.z).as_vec3(),
-                    //translation: Vec3::new(0.0, 0.0, 0.0),
                     ..default()
                 })
                 .insert(GlobalTransform::identity())
