@@ -10,6 +10,8 @@ use block_mesh::ndshape::{ConstShape, ConstShape3u32, ConstShape3usize};
 use block_mesh::{greedy_quads, visible_block_faces, GreedyQuadsBuffer, MergeVoxel, UnitQuadBuffer, Voxel, VoxelVisibility, RIGHT_HANDED_Y_UP_CONFIG};
 use ndcopy::{copy3, fill3};
 
+use crate::physics::AabbCollider;
+
 
 // Consts
 const CHUNK_WIDTH: usize = 16;
@@ -168,11 +170,6 @@ pub fn lazy_mesher (
             let mesh = generate_greedy_mesh (&mut meshes, &chunks, location);
 
             commands.entity(chunk.entity)
-                //.insert_bundle(PbrBundle {
-                //    mesh,
-                //    material: materials.add(material.clone()),
-                //    ..default()
-                //});
                 .insert(mesh)
                 .insert(materials.add(material.clone()));
         }
@@ -254,24 +251,27 @@ fn generate_greedy_mesh(
     let mut indices = Vec::with_capacity(num_indices);
     let mut positions = Vec::with_capacity(num_vertices);
     let mut normals = Vec::with_capacity(num_vertices);
+    let mut tex_coords = Vec::with_capacity(num_vertices);
     for (group, face) in buffer.quads.groups.into_iter().zip(faces.into_iter()) {
         for quad in group.into_iter() {
             indices.extend_from_slice(&face.quad_mesh_indices(positions.len() as u32));
             positions.extend_from_slice(&face.quad_mesh_positions(&quad, 1.0));
             normals.extend_from_slice(&face.quad_mesh_normals());
+            tex_coords.extend_from_slice(&face.tex_coords(
+                RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
+                true,
+                &quad,
+            ));
         }
     }
 
     let mut render_mesh = Mesh::new(PrimitiveTopology::TriangleList);
     render_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, VertexAttributeValues::Float32x3(positions));
     render_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, VertexAttributeValues::Float32x3(normals));
-    render_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, VertexAttributeValues::Float32x2(vec![[0.0; 2]; num_vertices]));
+    render_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, VertexAttributeValues::Float32x2(tex_coords));
     render_mesh.set_indices(Some(Indices::U32(indices.clone())));
 
-    let mesh = meshes.add(render_mesh);
-    
-
-    mesh
+    meshes.add(render_mesh)
 }
 
 // Yoinked as above too.
@@ -416,6 +416,11 @@ impl LoadedChunks {
             self.entry(index).insert(Chunk::new(blocks, chunk));
         }
     }
+
+
+    //pub fn aabb_collides(&self, aabb: AabbCollider) -> // Maybe don't return bool? We could instead return *where* the collision is happening (which vertex; maybe using an enum for which of the 8 vertices (or also some value for if there is no collision)) {
+        
+    //}
      
 }
  

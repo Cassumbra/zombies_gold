@@ -1,6 +1,7 @@
 use bevy::{prelude::*, input::mouse::MouseMotion};
-use bevy_rapier3d::prelude::Velocity;
 use leafwing_input_manager::{Actionlike, prelude::ActionState};
+
+use crate::physics::Velocity;
 
 const SPEED: f32 = 8.;
 const ACCELERATION: f32 = 2.;
@@ -37,7 +38,7 @@ pub fn process_actions(
 
         
         if action_state.just_pressed(Action::Jump) {
-            velocity.linvel += Vec3::new(0., 5., 0.); 
+            **velocity += Vec3::new(0., 5., 0.); 
         }
 
         let mut direction = Vec3::default();
@@ -56,13 +57,13 @@ pub fn process_actions(
         }
         
         if direction != Vec3::default() {
-            let mut velocity_add = ((direction.normalize_or_zero()*SPEED).lerp(velocity.linvel, 0.0) - velocity.linvel) * time.delta_seconds();
+            let mut velocity_add = ((direction.normalize_or_zero()*SPEED).lerp(**velocity, 0.0) - **velocity) * time.delta_seconds();
             velocity_add.y = 0.;
-            velocity.linvel += velocity_add;
+            **velocity += velocity_add;
         } else {
-            let mut velocity_add = (velocity.linvel.lerp(Vec3::default(), 1.0) - velocity.linvel) * time.delta_seconds();
+            let mut velocity_add = (velocity.lerp(Vec3::default(), 1.0) - **velocity) * time.delta_seconds();
             velocity_add.y = 0.;
-            velocity.linvel += velocity_add;
+            **velocity += velocity_add;
         }
     }
 }

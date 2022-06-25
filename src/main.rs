@@ -7,11 +7,15 @@ use bevy::{
 use bevy_rapier3d::{plugin::{RapierPhysicsPlugin, NoUserData}, prelude::RapierDebugRenderPlugin};
 use iyes_loopless::prelude::{AppLooplessStateExt, ConditionSet};
 use leafwing_input_manager::plugin::InputManagerPlugin;
-use bevy_inspector_egui::WorldInspectorPlugin;
+use bevy_inspector_egui::{WorldInspectorPlugin, RegisterInspectable};
+use physics::Velocity;
 
 
 #[path = "map/map.rs"]
 pub mod map;
+
+#[path = "physics/physics.rs"]
+pub mod physics;
 
 pub mod actions;
 
@@ -35,8 +39,12 @@ fn main() {
         .add_plugin(InputManagerPlugin::<actions::Action>::default())
         .add_plugin(WireframePlugin)
         .add_plugin(WorldInspectorPlugin::new())
+        .register_inspectable::<Velocity>()
 
         .add_plugin(map::MapPlugin)
+        .add_plugin(physics::PhysicsPlugin)
+
+
 
         //.add_loopless_state(GameState::Loading)
 
@@ -54,6 +62,8 @@ fn main() {
                 .run_in_state(GameState::Playing)
                 .with_system(actions::process_actions)
                 .with_system(player::meta_input)
+                .with_system(physics::apply_velocity)
+                .with_system(physics::apply_gravity)
                 .into()
         )
 
