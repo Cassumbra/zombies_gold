@@ -442,8 +442,8 @@ impl LoadedChunks {
         }
     }
 
-    
-    pub fn aabb_collides(&self, direction: Vec3, aabb: AabbCollider) ->  Vec3 {
+    /// Returns a normal and a combined collision.
+    pub fn aabb_collides(&self, direction: Vec3, aabb: AabbCollider) ->  (Vec3, Vec3) {
         // TODO: Return an infinity if the collider is squashed
         let mut need_check_x = Vec::<IVec3>::new();
         let mut need_check_y = Vec::<IVec3>::new();
@@ -492,11 +492,11 @@ impl LoadedChunks {
 
 
         let mut normal = Vec3::default();
+        let mut collision = Vec3::default();
         let blocksize = Vec3::new(1.0, 1.0, 1.0);
 
-        //println!("PRINTED HERE FOR YOUR PERUSAL");
+
         for position in need_check_x {
-            //println!("{:?}", position);
             let collidable = 
                 if let Some(block) = self.get_block(position) {
                     block.collidable()
@@ -504,13 +504,12 @@ impl LoadedChunks {
                 // Unloaded chunks act as collidable so the player doesn't go OOB
                 else {
                     true
-                }; 
-            //println!("collidable: {}", collidable);
+                };
 
             if collidable {
-                //println!("it collidable!");
                 if aabb.compare_simple(AabbCollider::with_location(position.as_vec3(), blocksize)) {
                     normal.x = normal_x;
+                    collision.x = position.x as f32;
                     break
                 }
             }
@@ -519,7 +518,6 @@ impl LoadedChunks {
         for position in need_check_y {
             let collidable = 
                 if let Some(block) = self.get_block(position) {
-                    //println!("there is a bloche here....");
                     block.collidable()
                 }
                 // Unloaded chunks act as collidable so the player doesn't go OOB
@@ -530,6 +528,7 @@ impl LoadedChunks {
             if collidable {
                 if aabb.compare_simple(AabbCollider::with_location(position.as_vec3(), blocksize)) {
                     normal.y = normal_y;
+                    collision.y = position.y as f32;
                     break
                 }
             }
@@ -548,12 +547,13 @@ impl LoadedChunks {
             if collidable {
                 if aabb.compare_simple(AabbCollider::with_location(position.as_vec3(), blocksize)) {
                     normal.z = normal_z;
+                    collision.z = position.z as f32;
                     break
                 }
             }
         }
 
-        normal
+        (normal, collision)
     }
 }
  
