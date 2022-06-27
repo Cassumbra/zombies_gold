@@ -1,7 +1,7 @@
 use bevy::{prelude::*, math::Vec3A, asset::LoadContext};
 use bevy_inspector_egui::Inspectable;
 
-use crate::map::LoadedChunks;
+use crate::map::{LoadedChunks, BlockType, Block};
 
 // Plugin
 #[derive(Default)]
@@ -30,6 +30,8 @@ pub fn apply_velocity (
     time: Res<Time>,
     loaded_chunks: Res<LoadedChunks>,
 ) {
+    //println!("what is at this location here: {:?}", LoadedChunks::index_block(IVec3::new(-31, 0, 0)));
+
     for (velocity, mut transform, opt_aabb) in  velocity_query.iter_mut() {
         // TODO: Check whether to use air resistance or ground resistance and use it.
         // TODO: Check if the direction we're moving has anything collidable and cancel velocity if it does

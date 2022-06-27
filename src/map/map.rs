@@ -377,7 +377,21 @@ impl Chunk {
 pub struct LoadedChunks(HashMap<IVec3, Chunk>);
 impl LoadedChunks {
     pub fn index_block (index: IVec3) -> (IVec3, [usize; 3]) {
-        (IVec3::new(index.x / CHUNK_WIDTH as i32, index.y / CHUNK_HEIGHT as i32, index.z / CHUNK_LENGTH as i32),
+        // block index is fine(?)
+        // chunk index needs to be 1 lower for negative indexes
+        let mut effective_index = index;
+
+        if index.x < 0 {
+            effective_index.x -= CHUNK_WIDTH as i32;
+        }
+        if index.y < 0 {
+            effective_index.y -= CHUNK_HEIGHT as i32;
+        }
+        if index.z < 0 {
+            effective_index.z -= CHUNK_LENGTH as i32;
+        }
+
+        (IVec3::new(effective_index.x / CHUNK_WIDTH as i32, effective_index.y / CHUNK_HEIGHT as i32, effective_index.z / CHUNK_LENGTH as i32),
         [index.x as usize % CHUNK_WIDTH, index.y as usize % CHUNK_HEIGHT, index.z as usize % CHUNK_LENGTH])
     }
 
@@ -505,6 +519,7 @@ impl LoadedChunks {
         for position in need_check_y {
             let collidable = 
                 if let Some(block) = self.get_block(position) {
+                    //println!("there is a bloche here....");
                     block.collidable()
                 }
                 // Unloaded chunks act as collidable so the player doesn't go OOB
