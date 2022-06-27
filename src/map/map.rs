@@ -108,7 +108,7 @@ pub fn set_block_chunk (
 }
 
 pub fn lazy_mesher (
-    mut chunks: ResMut<LoadedChunks>,
+    chunks: Res<LoadedChunks>,
 
     mut ev_set_block_chunk: EventReader<SetBlockEvent>,
 
@@ -131,31 +131,25 @@ pub fn lazy_mesher (
             SetBlockShape::Block(index) => {
                 let (chunk_index, block_index) = LoadedChunks::index_block(index);
 
-                if !need_mesh.contains(&chunk_index) {need_mesh.push(chunk_index)};
-
+                add_no_dupe(&mut need_mesh, chunk_index);
 
                 for i in 0..=2 {
                     if block_index[i] == CHUNK_SIDES[i] {
                         let modified_index = chunk_index + BLOCK_SIDES[i];
-                        if !need_mesh.contains(&modified_index) {need_mesh.push(modified_index)};
+                        add_no_dupe(&mut need_mesh, modified_index);
                     }
                     else if block_index[i] == CHUNK_SIDES[i+1] {
                         let modified_index = chunk_index + BLOCK_SIDES[i+1];
-                        if !need_mesh.contains(&modified_index) {need_mesh.push(modified_index)};
+                        add_no_dupe(&mut need_mesh, modified_index);
                     }
                 }
-
-                
-
-                // TODO: Add adjacent chunks to the vec if needed.
-                //if block_index.x = 
             }
             SetBlockShape::Chunk(chunk_index) => {
-                if !need_mesh.contains(&chunk_index) {need_mesh.push(chunk_index)};
+                add_no_dupe(&mut need_mesh, chunk_index);
 
                 for offset in BLOCK_SIDES {
                     let modified_index = chunk_index + offset;
-                    if !need_mesh.contains(&modified_index) {need_mesh.push(modified_index)};
+                    add_no_dupe(&mut need_mesh, modified_index);
                 }
             },
             
@@ -177,7 +171,11 @@ pub fn lazy_mesher (
 }
 
 // Helper functions
-// Yoinked from block-mesh example cause I can't be assed.
+fn add_no_dupe<T: PartialEq>(vec: &mut Vec<T>, val: T) {
+    if !vec.contains(&val) {vec.push(val)};
+}
+
+// Yoinked from block-mesh examples with modifications cause I can't be assed.
 fn generate_greedy_mesh(
     meshes: &mut Assets<Mesh>,
     chunks: &LoadedChunks,
@@ -314,6 +312,10 @@ impl Block {
     pub fn new_with_damage (block_type: BlockType, damage: f32) -> Self {
         Self {block_type, damage}
     }
+
+    pub fn collidable (&self) -> bool {
+        self.block_type.collidable()
+    }
 }
 impl Voxel for Block {
     fn get_visibility(&self) -> VoxelVisibility {
@@ -349,6 +351,15 @@ impl BlockType {
             _ => {VoxelVisibility::Opaque}
         }
     }
+    pub fn collidable(&self) -> bool {
+        match self {
+            BlockType::Infinium => {true}
+            BlockType::Air => {false}
+            BlockType::Dirt => {true}
+
+            _ => {true}
+        }
+    }
 }
 
 pub struct Chunk {
@@ -367,7 +378,7 @@ pub struct LoadedChunks(HashMap<IVec3, Chunk>);
 impl LoadedChunks {
     pub fn index_block (index: IVec3) -> (IVec3, [usize; 3]) {
         (IVec3::new(index.x / CHUNK_WIDTH as i32, index.y / CHUNK_HEIGHT as i32, index.z / CHUNK_LENGTH as i32),
-        [index.x as usize % CHUNK_WIDTH , index.y as usize % CHUNK_HEIGHT, index.z as usize & CHUNK_LENGTH])
+        [index.x as usize % CHUNK_WIDTH, index.y as usize % CHUNK_HEIGHT, index.z as usize % CHUNK_LENGTH])
     }
 
     pub fn get_block (&self, index: IVec3) -> Option<&Block> {
@@ -417,11 +428,118 @@ impl LoadedChunks {
         }
     }
 
+    
+    pub fn aabb_collides(&self, direction: Vec3, aabb: AabbCollider) ->  Vec3 {
+        // TODO: Return an infinity if the collider is squashed
+        let mut need_check_x = Vec::<IVec3>::new();
+        let mut need_check_y = Vec::<IVec3>::new();
+        let mut need_check_z = Vec::<IVec3>::new();
 
-    //pub fn aabb_collides(&self, aabb: AabbCollider) -> // Maybe don't return bool? We could instead return *where* the collision is happening (which vertex; maybe using an enum for which of the 8 vertices (or also some value for if there is no collision)) {
-        
-    //}
-     
+        let min_x = aabb.min.x.round() as i32;
+        let max_x = aabb.max.x.round() as i32;
+        let min_y = aabb.min.y.round() as i32;
+        let max_y = aabb.max.y.round() as i32;
+        let min_z = aabb.min.z.round() as i32;
+        let max_z = aabb.max.z.round() as i32;
+
+        let mut normal_x = 0.0;
+        let mut normal_y = 0.0;
+        let mut normal_z = 0.0;
+
+        if direction.x != 0.0 {
+            // We get what our normal will be if we detect a collision later, and we set x to an appropriate value for detecting a collision
+            // Note: I was adding 1 to max and subtracting it from min earlier. I think this is not necessary or good for me to do.
+            //       Will see later. Leaving this note so I keep it in mind.
+            let x = if direction.x > 0.0 {normal_x = 1.0; max_x} else {normal_x = -1.0; min_x};
+            for y in (min_y)..=(max_y) {
+                for z in (min_z)..=(max_z) {
+                    need_check_x.push(IVec3::new(x, y, z))
+                }
+            }
+        }
+
+        if direction.y != 0.0 {
+            let y = if direction.y > 0.0 {normal_y = 1.0; max_y} else {normal_y = -1.0; min_y};
+            for x in (min_x)..=(max_x) {
+                for z in (min_z)..=(max_z) {
+                    need_check_y.push(IVec3::new(x, y, z))
+                }
+            }
+        }
+
+        if direction.z != 0.0 {
+            let z = if direction.z > 0.0 {normal_z = 1.0; max_z} else {normal_z = -1.0; min_z};
+            for x in (min_x)..=(max_x) {
+                for y in (min_y)..=(max_y) {
+                    need_check_z.push(IVec3::new(x, y, z))
+                }
+            }
+        }
+
+
+        let mut normal = Vec3::default();
+        let blocksize = Vec3::new(1.0, 1.0, 1.0);
+
+        //println!("PRINTED HERE FOR YOUR PERUSAL");
+        for position in need_check_x {
+            //println!("{:?}", position);
+            let collidable = 
+                if let Some(block) = self.get_block(position) {
+                    block.collidable()
+                }
+                // Unloaded chunks act as collidable so the player doesn't go OOB
+                else {
+                    true
+                }; 
+            //println!("collidable: {}", collidable);
+
+            if collidable {
+                //println!("it collidable!");
+                if aabb.compare_simple(AabbCollider::with_location(position.as_vec3(), blocksize)) {
+                    normal.x = normal_x;
+                    break
+                }
+            }
+        }
+
+        for position in need_check_y {
+            let collidable = 
+                if let Some(block) = self.get_block(position) {
+                    block.collidable()
+                }
+                // Unloaded chunks act as collidable so the player doesn't go OOB
+                else {
+                    true
+                };
+
+            if collidable {
+                if aabb.compare_simple(AabbCollider::with_location(position.as_vec3(), blocksize)) {
+                    normal.y = normal_y;
+                    break
+                }
+            }
+        }
+
+        for position in need_check_z {
+            let collidable = 
+                if let Some(block) = self.get_block(position) {
+                    block.collidable()
+                }
+                // Unloaded chunks act as collidable so the player doesn't go OOB
+                else {
+                    true
+                };
+
+            if collidable {
+                if aabb.compare_simple(AabbCollider::with_location(position.as_vec3(), blocksize)) {
+                    normal.z = normal_z;
+                    break
+                }
+            }
+        }
+
+        normal
+    }
 }
  
 

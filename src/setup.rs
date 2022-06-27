@@ -12,7 +12,7 @@ const PLAYER_HEIGHT: f32 = 0.4;
 pub fn spawn_actors (
     mut commands: Commands,
 ) {
-    let spawn_pos = Vec3::new(8.0, 0.0, 0.0);
+    let spawn_pos = Vec3::new(0.0, 0.0, 0.0);
 
     // Player
     commands
