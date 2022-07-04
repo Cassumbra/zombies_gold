@@ -442,61 +442,121 @@ impl LoadedChunks {
         }
     }
 
-    /// Returns a normal and a combined collision.
+    /// Returns normals and a combined collision.
     pub fn aabb_collides(&self, direction: Vec3, aabb: AabbCollider) ->  (Vec3, Vec3) {
         // TODO: Return an infinity if the collider is squashed
-        let mut need_check_x = Vec::<IVec3>::new();
-        let mut need_check_y = Vec::<IVec3>::new();
-        let mut need_check_z = Vec::<IVec3>::new();
-
-        let min_x = aabb.min.x.round() as i32;
-        let max_x = aabb.max.x.round() as i32;
-        let min_y = aabb.min.y.round() as i32;
-        let max_y = aabb.max.y.round() as i32;
-        let min_z = aabb.min.z.round() as i32;
-        let max_z = aabb.max.z.round() as i32;
 
         let mut normal_x = 0.0;
+        let mut collision_x = 0.0;
         let mut normal_y = 0.0;
+        let mut collision_y = 0.0;
         let mut normal_z = 0.0;
+        let mut collision_z = 0.0;
 
         if direction.x != 0.0 {
             // We get what our normal will be if we detect a collision later, and we set x to an appropriate value for detecting a collision
             // Note: I was adding 1 to max and subtracting it from min earlier. I think this is not necessary or good for me to do.
             //       Will see later. Leaving this note so I keep it in mind.
-            let x = if direction.x > 0.0 {normal_x = 1.0; max_x} else {normal_x = -1.0; min_x};
-            for y in (min_y)..=(max_y) {
-                for z in (min_z)..=(max_z) {
-                    need_check_x.push(IVec3::new(x, y, z))
-                }
-            }
+            let (temp_norm, temp_collide) = self.aabb_collides_simple(0, direction, aabb);
+            normal_x = temp_norm;
+            collision_x = temp_collide.x;
         }
 
         if direction.y != 0.0 {
-            let y = if direction.y > 0.0 {normal_y = 1.0; max_y} else {normal_y = -1.0; min_y};
-            for x in (min_x)..=(max_x) {
-                for z in (min_z)..=(max_z) {
-                    need_check_y.push(IVec3::new(x, y, z))
-                }
-            }
+            let (temp_norm, temp_collide) = self.aabb_collides_simple(1, direction, aabb);
+            normal_y = temp_norm;
+            collision_y = temp_collide.y;
         }
 
         if direction.z != 0.0 {
-            let z = if direction.z > 0.0 {normal_z = 1.0; max_z} else {normal_z = -1.0; min_z};
-            for x in (min_x)..=(max_x) {
-                for y in (min_y)..=(max_y) {
-                    need_check_z.push(IVec3::new(x, y, z))
+            let (temp_norm, temp_collide) = self.aabb_collides_simple(2, direction, aabb);
+            normal_z = temp_norm;
+            collision_z = temp_collide.z;
+        }
+
+        (Vec3::new(normal_x, normal_y, normal_z), Vec3::new(collision_x, collision_y, collision_z))
+    }
+
+    /// Returns a normal and a collision. Only checks a single axis.
+    pub fn aabb_collides_simple(&self, axis: usize, direction: Vec3, aabb: AabbCollider) ->  (f32, Vec3) {
+        let mut need_check = Vec::<IVec3>::new();
+
+        let mut min_x = aabb.min.x.round() as i32;
+        let mut max_x = aabb.max.x.round() as i32;
+        let mut min_y = aabb.min.y.round() as i32;
+        let mut max_y = aabb.max.y.round() as i32;
+        let mut min_z = aabb.min.z.round() as i32;
+        let mut max_z = aabb.max.z.round() as i32;
+
+        let mut normal = 0.0;
+        let mut collision = Vec3::default();
+
+        if direction[axis] != 0.0 {
+            match axis {
+                // x
+                0 => {
+                    if direction.x > 0.0 {
+                        normal = 1.0;
+                        min_x = max_x;
+                    }
+                    else {
+                        normal = -1.0;
+                        max_x = min_x;
+                    }
+                    //if direction.x > 0.0 {normal_x = 1.0; max_x} else {normal_x = -1.0; min_x};
+                    
+                }
+    
+                // y
+                1 => {
+                    if direction.y > 0.0 {
+                        normal = 1.0;
+                        min_y = max_y;
+                    }
+                    else {
+                        normal = -1.0;
+                        max_y = min_y;
+                    }
+                }
+    
+                // z
+                2 => {
+                    if direction.z > 0.0 {
+                        normal = 1.0;
+                        min_z = max_z;
+                    }
+                    else {
+                        normal = -1.0;
+                        max_z = min_z;
+                    }
+                }
+    
+                // ???
+                _ => {
+                    todo!();
                 }
             }
         }
+        else {
+            return (normal, collision)
+        }
 
-
-        let mut normal = Vec3::default();
-        let mut collision = Vec3::default();
         let blocksize = Vec3::new(1.0, 1.0, 1.0);
 
+        if direction[axis] != 0.0 {
+            // We get what our normal will be if we detect a collision later, and we set x to an appropriate value for detecting a collision
+            // Note: I was adding 1 to max and subtracting it from min earlier. I think this is not necessary or good for me to do.
+            //       Will see later. Leaving this note so I keep it in mind.
+            for x in (min_x)..=(max_x) {
+                for y in (min_y)..=(max_y) {
+                    for z in (min_z)..=(max_z) {
+                        need_check.push(IVec3::new(x, y, z))
+                    }
+                }
+            }
+        }
 
-        for position in need_check_x {
+        for position in need_check {
             let collidable = 
                 if let Some(block) = self.get_block(position) {
                     block.collidable()
@@ -508,52 +568,13 @@ impl LoadedChunks {
 
             if collidable {
                 if aabb.compare_simple(AabbCollider::with_location(position.as_vec3(), blocksize)) {
-                    normal.x = normal_x;
-                    collision.x = position.x as f32;
-                    break
+                    collision = position.as_vec3();
+                    return (normal, collision)
                 }
             }
         }
 
-        for position in need_check_y {
-            let collidable = 
-                if let Some(block) = self.get_block(position) {
-                    block.collidable()
-                }
-                // Unloaded chunks act as collidable so the player doesn't go OOB
-                else {
-                    true
-                };
-
-            if collidable {
-                if aabb.compare_simple(AabbCollider::with_location(position.as_vec3(), blocksize)) {
-                    normal.y = normal_y;
-                    collision.y = position.y as f32;
-                    break
-                }
-            }
-        }
-
-        for position in need_check_z {
-            let collidable = 
-                if let Some(block) = self.get_block(position) {
-                    block.collidable()
-                }
-                // Unloaded chunks act as collidable so the player doesn't go OOB
-                else {
-                    true
-                };
-
-            if collidable {
-                if aabb.compare_simple(AabbCollider::with_location(position.as_vec3(), blocksize)) {
-                    normal.z = normal_z;
-                    collision.z = position.z as f32;
-                    break
-                }
-            }
-        }
-
-        (normal, collision)
+        return (0.0, collision)
     }
 }
  

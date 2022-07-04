@@ -35,7 +35,7 @@ pub fn apply_velocity (
         // TODO: Check if the direction we're moving has anything collidable and cancel velocity if it does
         if let Some(aabb) = opt_aabb {
             // TODO: We need to modify our aabb by our transform/velocity before we pass it in to be checked.
-            let modified_aabb = AabbCollider::add_location(transform.translation + **velocity, aabb);
+            let modified_aabb = AabbCollider::add_location(transform.translation, aabb); //+ **velocity
             let (normal, collision) = loaded_chunks.aabb_collides(**velocity, modified_aabb);
             let half_extents = aabb.get_half_extents();
 
