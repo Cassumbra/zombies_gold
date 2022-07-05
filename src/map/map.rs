@@ -481,60 +481,20 @@ impl LoadedChunks {
     pub fn aabb_collides_simple(&self, axis: usize, direction: Vec3, aabb: AabbCollider) ->  (f32, Vec3) {
         let mut need_check = Vec::<IVec3>::new();
 
-        let mut min_x = aabb.min.x.round() as i32;
-        let mut max_x = aabb.max.x.round() as i32;
-        let mut min_y = aabb.min.y.round() as i32;
-        let mut max_y = aabb.max.y.round() as i32;
-        let mut min_z = aabb.min.z.round() as i32;
-        let mut max_z = aabb.max.z.round() as i32;
+        let mut min = aabb.min.round().as_ivec3();
+        let mut max = aabb.max.round().as_ivec3();
 
         let mut normal = 0.0;
         let mut collision = Vec3::default();
 
         if direction[axis] != 0.0 {
-            match axis {
-                // x
-                0 => {
-                    if direction.x > 0.0 {
-                        normal = 1.0;
-                        min_x = max_x;
-                    }
-                    else {
-                        normal = -1.0;
-                        max_x = min_x;
-                    }
-                    //if direction.x > 0.0 {normal_x = 1.0; max_x} else {normal_x = -1.0; min_x};
-                    
-                }
-    
-                // y
-                1 => {
-                    if direction.y > 0.0 {
-                        normal = 1.0;
-                        min_y = max_y;
-                    }
-                    else {
-                        normal = -1.0;
-                        max_y = min_y;
-                    }
-                }
-    
-                // z
-                2 => {
-                    if direction.z > 0.0 {
-                        normal = 1.0;
-                        min_z = max_z;
-                    }
-                    else {
-                        normal = -1.0;
-                        max_z = min_z;
-                    }
-                }
-    
-                // ???
-                _ => {
-                    todo!();
-                }
+            if direction.x > 0.0 {
+                normal = 1.0;
+                min[axis] = max[axis];
+            }
+            else {
+                normal = -1.0;
+                max[axis] = min[axis];
             }
         }
         else {
@@ -547,9 +507,9 @@ impl LoadedChunks {
             // We get what our normal will be if we detect a collision later, and we set x to an appropriate value for detecting a collision
             // Note: I was adding 1 to max and subtracting it from min earlier. I think this is not necessary or good for me to do.
             //       Will see later. Leaving this note so I keep it in mind.
-            for x in (min_x)..=(max_x) {
-                for y in (min_y)..=(max_y) {
-                    for z in (min_z)..=(max_z) {
+            for x in (min.x)..=(max.x) {
+                for y in (min.y)..=(max.y) {
+                    for z in (min.z)..=(max.z) {
                         need_check.push(IVec3::new(x, y, z))
                     }
                 }

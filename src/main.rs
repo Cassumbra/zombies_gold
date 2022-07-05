@@ -60,10 +60,19 @@ fn main() {
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::Playing)
+                .label("input")
+                .before("physics")
                 .with_system(actions::process_actions)
                 .with_system(player::meta_input)
-                .with_system(physics::apply_velocity)
+                .into()
+        )
+
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::Playing)
+                .label("physics")
                 .with_system(physics::apply_gravity)
+                .with_system(physics::apply_velocity)
                 .into()
         )
 

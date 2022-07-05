@@ -34,39 +34,35 @@ pub fn apply_velocity (
         // TODO: Check whether to use air resistance or ground resistance and use it.
         // TODO: Check if the direction we're moving has anything collidable and cancel velocity if it does
         if let Some(aabb) = opt_aabb {
-            // TODO: We need to modify our aabb by our transform/velocity before we pass it in to be checked.
-            let modified_aabb = AabbCollider::add_location(transform.translation, aabb); //+ **velocity
-            let (normal, collision) = loaded_chunks.aabb_collides(**velocity, modified_aabb);
-            let half_extents = aabb.get_half_extents();
+            let velocities = velocity.to_array();
+            // actually i'm not sure if we need to map these? it might be fine to keep them as references
+            let mut velocities: Vec<(usize, f32)> = velocities.iter().enumerate().map(|(axis, mag)| (axis, *mag)).collect();
+            velocities.sort_by(|(_axis0, mag0), (_axis1, mag1)| mag0.partial_cmp(mag1).unwrap());
+            
 
-            if normal.x != 0.0 {
-                velocity.x = 0.0;
-                if normal.x > 0.0 {
-                    // 0.5 for block half extents. TODO: This should be a constant somewhere.
-                    transform.translation.x = collision.x - 0.5 - half_extents.x;
+            let half_extents = aabb.get_half_extents();
+            for (axis, mag) in velocities {
+                let modified_aabb = AabbCollider::add_location(transform.translation, aabb); //+ **velocity
+                let (normal, collision) = loaded_chunks.aabb_collides_simple(axis, **velocity, modified_aabb);
+                println!("axis: {}, normal: {}", axis, normal);
+
+                if normal > 0.0 && mag > 0.0 {
+                    velocity[axis] = 0.0;
+                    transform.translation[axis] = collision[axis] - 0.5 - half_extents[axis];
+                }
+                else if normal < 0.0 && mag < 0.0 {
+                    velocity[axis] = 0.0;
+                    transform.translation[axis] = collision[axis] + 0.5 + half_extents[axis];
                 }
                 else {
-                    transform.translation.x = collision.x + 0.5 + half_extents.x;
-                }
-            }
-            if normal.y != 0.0 {
-                velocity.y = 0.0;
-                if normal.y > 0.0 {
-                    transform.translation.y = collision.y - 0.5 - half_extents.y;
-                } else {
-                    transform.translation.y = collision.y + 0.5 + half_extents.y;
-                }
-            }
-            if normal.z != 0.0 {
-                velocity.z = 0.0;
-                if normal.z > 0.0 {
-                    transform.translation.z = collision.z - 0.5 - half_extents.z;
-                } else {
-                    transform.translation.z = collision.z + 0.5 + half_extents.z;
+                    transform.translation[axis] += velocity[axis] * time.delta_seconds();
                 }
             }
         }
-        transform.translation += **velocity * time.delta_seconds();
+        else {
+            transform.translation += **velocity * time.delta_seconds();
+        }
+        
     }
 }
 
@@ -209,7 +205,7 @@ impl AabbCollider {
     }
 }
 
-#[derive(Component, Deref, DerefMut, Debug, Reflect, Inspectable)]
+#[derive(Copy, Clone, Component, Deref, DerefMut, Debug, Reflect, Inspectable)]
 pub struct Velocity (pub Vec3);
 
 #[derive(Component)]
