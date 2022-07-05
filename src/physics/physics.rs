@@ -37,14 +37,16 @@ pub fn apply_velocity (
             let velocities = velocity.to_array();
             // actually i'm not sure if we need to map these? it might be fine to keep them as references
             let mut velocities: Vec<(usize, f32)> = velocities.iter().enumerate().map(|(axis, mag)| (axis, *mag)).collect();
-            velocities.sort_by(|(_axis0, mag0), (_axis1, mag1)| mag0.partial_cmp(mag1).unwrap());
+            velocities.sort_by(|(_axis0, mag0), (_axis1, mag1)| mag0.abs().partial_cmp(&mag1.abs()).unwrap());
             
 
             let half_extents = aabb.get_half_extents();
             for (axis, mag) in velocities {
                 let modified_aabb = AabbCollider::add_location(transform.translation, aabb); //+ **velocity
                 let (normal, collision) = loaded_chunks.aabb_collides_simple(axis, **velocity, modified_aabb);
-                println!("axis: {}, normal: {}", axis, normal);
+                //println!("axis: {}, normal: {}", axis, normal);
+                println!("location: {}", transform.translation);
+                println!("aabb: {:?}", modified_aabb);
 
                 if normal > 0.0 && mag > 0.0 {
                     velocity[axis] = 0.0;
