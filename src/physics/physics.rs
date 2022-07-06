@@ -34,6 +34,7 @@ pub fn apply_velocity (
         // TODO: Check whether to use air resistance or ground resistance and use it.
         // TODO: Check if the direction we're moving has anything collidable and cancel velocity if it does
         if let Some(aabb) = opt_aabb {
+            /*
             let velocities = velocity.to_array();
             // actually i'm not sure if we need to map these? it might be fine to keep them as references
             let mut velocities: Vec<(usize, f32)> = velocities.iter().enumerate().map(|(axis, mag)| (axis, *mag)).collect();
@@ -60,6 +61,7 @@ pub fn apply_velocity (
                     transform.translation[axis] += velocity[axis] * time.delta_seconds();
                 }
             }
+        */
         }
         else {
             transform.translation += **velocity * time.delta_seconds();
@@ -82,18 +84,25 @@ pub fn apply_gravity (
 // Components
 #[derive(Component, Clone, Copy, Debug)]
 pub struct AabbCollider {
-    pub min: Vec3,
-    pub max: Vec3,
+    /// Width, height, length.
+    pub extents: Vec3,
+    //pub min: Vec3,
+    //pub max: Vec3,
     // Gets updated in collision detection and used in collision response
     // Ex: colliding exclusively with floor would be 0.0, 1.0, 0.0
     pub normal: Vec3,
 }
 impl Default for AabbCollider {
     fn default() -> Self {
-        Self { min: Vec3::new(-0.5, -0.5, -0.5), max: Vec3::new(0.5, 0.5, 0.5), normal: Vec3::new(0.0, 0.0, 0.0) }
+        Self { extents: Vec3::new(1.0, 1.0, 1.0), normal: Vec3::default() }
+        //Self { min: Vec3::new(-0.5, -0.5, -0.5), max: Vec3::new(0.5, 0.5, 0.5), normal: Vec3::new(0.0, 0.0, 0.0) }
     }
 }
 impl AabbCollider {
+    pub fn new(extents: Vec3) -> Self {
+        Self { extents, ..default()}
+    }
+    /*
     pub fn new(size: Vec3A) -> Self {
         Self {min: Vec3::from(size / -2.0), max: Vec3::from(size / 2.0), ..default()}
     }
@@ -205,6 +214,7 @@ impl AabbCollider {
         self.min.y <= collider.max.y && self.max.y >= collider.min.y &&
         self.min.z <= collider.max.z && self.max.z >= collider.min.z
     }
+     */
 }
 
 #[derive(Copy, Clone, Component, Deref, DerefMut, Debug, Reflect, Inspectable)]

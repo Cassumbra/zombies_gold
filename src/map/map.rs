@@ -442,6 +442,7 @@ impl LoadedChunks {
         }
     }
 
+    /*
     /// Returns normals and a combined collision.
     pub fn aabb_collides(&self, direction: Vec3, aabb: AabbCollider) ->  (Vec3, Vec3) {
         // TODO: Return an infinity if the collider is squashed
@@ -536,6 +537,7 @@ impl LoadedChunks {
 
         return (0.0, collision)
     }
+    */
 }
  
 

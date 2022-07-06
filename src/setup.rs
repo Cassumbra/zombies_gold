@@ -28,7 +28,8 @@ pub fn spawn_actors (
         })
         .insert(Player)
         .insert(Falls)
-        .insert(AabbCollider::new(Vec3A::new(0.4, 1.8, 0.4)))
+        
+        //.insert(AabbCollider::new(Vec3A::new(0.4, 1.8, 0.4)))
         .insert(Velocity(Vec3::new(0.0, 0.0, 0.0)))
         .insert(Transform {
             translation: spawn_pos,
@@ -43,6 +44,7 @@ pub fn spawn_actors (
         .with_children(|c| {
             c.spawn_bundle(PerspectiveCameraBundle::new_3d())
                 .insert( Transform {
+                    // TODO: If our aabb extends out from our transform, the location of the camera must do so too.
                     translation: Vec3::new(0.0, PLAYER_HEIGHT - (PLAYER_HEIGHT / 4.0), 0.0),
                     ..default()
                 });
