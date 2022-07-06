@@ -30,7 +30,7 @@ pub fn apply_velocity (
     time: Res<Time>,
     loaded_chunks: Res<LoadedChunks>,
 ) {
-    for (mut velocity, mut transform, opt_aabb) in  velocity_query.iter_mut() {
+    for (mut velocity, mut transform, opt_aabb) in velocity_query.iter_mut() {
         // TODO: Check whether to use air resistance or ground resistance and use it.
         // TODO: Check if the direction we're moving has anything collidable and cancel velocity if it does
         if let Some(aabb) = opt_aabb {
@@ -39,8 +39,8 @@ pub fn apply_velocity (
             let mut velocities: Vec<(usize, f32)> = velocities.iter().enumerate().map(|(axis, mag)| (axis, *mag)).collect();
             velocities.sort_by(|(_axis0, mag0), (_axis1, mag1)| mag0.abs().partial_cmp(&mag1.abs()).unwrap());
             
-
             let half_extents = aabb.get_half_extents();
+            
             for (axis, mag) in velocities {
                 let modified_aabb = AabbCollider::add_location(transform.translation, aabb); //+ **velocity
                 let (normal, collision) = loaded_chunks.aabb_collides_simple(axis, **velocity, modified_aabb);
