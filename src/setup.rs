@@ -29,7 +29,7 @@ pub fn spawn_actors (
         .insert(Player)
         .insert(Falls)
         
-        //.insert(AabbCollider::new(Vec3A::new(0.4, 1.8, 0.4)))
+        .insert(AabbCollider::new(Vec3::new(0.4, 1.8, 0.4)))
         .insert(Velocity(Vec3::new(0.0, 0.0, 0.0)))
         .insert(Transform {
             translation: spawn_pos,

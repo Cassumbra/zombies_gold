@@ -8,7 +8,7 @@ use bevy_rapier3d::{plugin::{RapierPhysicsPlugin, NoUserData}, prelude::RapierDe
 use iyes_loopless::prelude::{AppLooplessStateExt, ConditionSet};
 use leafwing_input_manager::plugin::InputManagerPlugin;
 use bevy_inspector_egui::{WorldInspectorPlugin, RegisterInspectable};
-use physics::Velocity;
+use physics::{Velocity, AabbCollider};
 
 
 #[path = "map/map.rs"]
@@ -40,6 +40,7 @@ fn main() {
         .add_plugin(WireframePlugin)
         .add_plugin(WorldInspectorPlugin::new())
         .register_inspectable::<Velocity>()
+        .register_inspectable::<AabbCollider>()
 
         .add_plugin(map::MapPlugin)
         .add_plugin(physics::PhysicsPlugin)

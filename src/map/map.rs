@@ -1,13 +1,13 @@
 use std::ops::{Index, IndexMut};
 
-use bevy::math::{Vec3A, const_ivec3};
+use bevy::math::{const_ivec3, const_vec3};
 use bevy::pbr::wireframe::WireframeConfig;
 use bevy::render::mesh::{PrimitiveTopology, VertexAttributeValues, Indices};
 use bevy::{prelude::*, utils::HashMap};
 use enum_map::{EnumMap, Enum};
-use ndarray::{Array3, Shape, Dim, Array};
-use block_mesh::ndshape::{ConstShape, ConstShape3u32, ConstShape3usize};
-use block_mesh::{greedy_quads, visible_block_faces, GreedyQuadsBuffer, MergeVoxel, UnitQuadBuffer, Voxel, VoxelVisibility, RIGHT_HANDED_Y_UP_CONFIG};
+use ndarray::{Array3, Array};
+use block_mesh::ndshape::{ConstShape3u32};
+use block_mesh::{greedy_quads, GreedyQuadsBuffer, MergeVoxel, Voxel, VoxelVisibility, RIGHT_HANDED_Y_UP_CONFIG};
 use ndcopy::{copy3, fill3};
 
 use crate::physics::AabbCollider;
@@ -33,6 +33,8 @@ const CHUNK_SIDES: [usize; 6] = [0,
                                  0,
                                  CHUNK_LENGTH,
                                 ];
+
+pub const BLOCK_SIZE: Vec3 = const_vec3!([0.5; 3]);
 
 // Plugin
 #[derive(Default)]
@@ -417,6 +419,14 @@ impl LoadedChunks {
         }
     }
 
+    pub fn solid_or_oob (&self, index: IVec3) -> bool {
+        if let Some(block) = self.get_block(index) {
+            block.collidable()
+        }
+        else {
+            true
+        }
+    }
     
     pub fn set_block_chunk (&mut self, index: IVec3, block: Block, commands: &mut Commands) {
         if let Some(chunk) = self.get_mut(&index) {
@@ -440,6 +450,31 @@ impl LoadedChunks {
             // Add chunk to loaded chunks
             self.entry(index).insert(Chunk::new(blocks, chunk));
         }
+    }
+
+    pub fn broadphase(&self, aabb: &AabbCollider, position: &Vec3, velocity: &Vec3) -> Vec<(Vec3, f32)> {
+        let (broadphase_location, broadphase_extents) = aabb.broadphase(position, velocity);
+        let start = broadphase_location.floor().as_ivec3();
+        let end = broadphase_extents.ceil().as_ivec3();
+
+        let mut positions = Vec::<(Vec3, f32)>::new();
+
+        for x in start.x..=end.x {
+            for y in start.y..=end.y {
+                for z in start.z..=end.z {
+                    let ivec3 = IVec3::new(x, y, z);
+
+                    if self.solid_or_oob(ivec3) {
+                        let vec3 = ivec3.as_vec3();
+                        positions.push((vec3, position.distance_squared(vec3)));
+                    }
+                }
+            }
+        }
+
+        positions.sort_unstable_by(|(_pos1, dist1), (_pos2, dist2)| dist1.partial_cmp(dist2).unwrap());
+
+        positions
     }
 
     /*
