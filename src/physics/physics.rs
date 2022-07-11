@@ -32,6 +32,11 @@ pub fn apply_velocity (
     loaded_chunks: Res<LoadedChunks>,
 ) {
     for (mut velocity, mut transform, mut opt_aabb) in velocity_query.iter_mut() {
+
+        if **velocity == Vec3::default() {
+            println!("dude");
+            continue
+        }
         // TODO: Check whether to use air resistance or ground resistance and use it.
         // TODO: Check if the direction we're moving has anything collidable and cancel velocity if it does
         if let Some(mut aabb) = opt_aabb {
@@ -42,62 +47,43 @@ pub fn apply_velocity (
             let mut remaining_time = 1.0;
 
             while remaining_time > 0.0 {
-                let modified_velocity = **velocity * time.delta_seconds() * remaining_time;
+                //println!("position: {}", transform.translation);
+                println!("velocity: {}", **velocity);
+                let mut modified_velocity = **velocity * time.delta_seconds() * remaining_time;
                 let positions = loaded_chunks.broadphase(&aabb, &transform.translation, &modified_velocity);
-                let mut collision_time = 0.0;
-                let mut modified_velocity = **velocity;
+                if positions.len() == 0 {
+                    break
+                }
+                //let mut collision_time = 0.0;
+                //let mut modified_velocity = **velocity;
 
                 for (position, _distance) in positions {
-                    collision_time = aabb.compare_swept(transform.translation, modified_velocity, BLOCK_SIZE, position);
-
-                    if collision_time > 0.0 {
+                    remaining_time = aabb.compare_swept(transform.translation, modified_velocity, BLOCK_SIZE, position);
+                    println!("remaining time: {}", remaining_time);
+                    // 1 means no collision, anything lower is a collision.
+                    if remaining_time < 1.0 {
                         break
                     }
                 }
 
-                if collision_time > 1.0 {
+                if remaining_time < 1.0 {
                     (remaining_time, modified_velocity) = aabb.response_slide(&mut transform.translation, &modified_velocity, remaining_time);
-                    **velocity = modified_velocity * (1.0 / time.delta_seconds()) * (1.0 / remaining_time);
-                }
-                else {
-                    break
-                }
-
-            }
-
-            /*
-            let velocities = velocity.to_array();
-            // actually i'm not sure if we need to map these? it might be fine to keep them as references
-            let mut velocities: Vec<(usize, f32)> = velocities.iter().enumerate().map(|(axis, mag)| (axis, *mag)).collect();
-            velocities.sort_by(|(_axis0, mag0), (_axis1, mag1)| mag0.abs().partial_cmp(&mag1.abs()).unwrap());
-            
-            let half_extents = aabb.get_half_extents();
-            
-            for (axis, mag) in velocities {
-                let modified_aabb = AabbCollider::add_location(transform.translation, aabb); //+ **velocity
-                let (normal, collision) = loaded_chunks.aabb_collides_simple(axis, **velocity, modified_aabb);
-                //println!("axis: {}, normal: {}", axis, normal);
-                println!("location: {}", transform.translation);
-                println!("aabb: {:?}", modified_aabb);
-
-                if normal > 0.0 && mag > 0.0 {
-                    velocity[axis] = 0.0;
-                    transform.translation[axis] = collision[axis] - 0.5 - half_extents[axis];
-                }
-                else if normal < 0.0 && mag < 0.0 {
-                    velocity[axis] = 0.0;
-                    transform.translation[axis] = collision[axis] + 0.5 + half_extents[axis];
-                }
-                else {
-                    transform.translation[axis] += velocity[axis] * time.delta_seconds();
+                    //println!("modified velocity be: {}", modified_velocity);
+                    //println!("time is: {}", remaining_time);
+                    //println!("UH OH: {}", 1.0 / remaining_time);
+                    if remaining_time > 0.0 {
+                        **velocity = modified_velocity * (1.0 / time.delta_seconds()) * (1.0 / remaining_time);
+                    } else {
+                        **velocity = Vec3::default();
+                    }
+                    
                 }
             }
-        */
         }
         //else {
+            //println!("VELOCITY IS: {}", **velocity);
             transform.translation += **velocity * time.delta_seconds();
         //}
-        
     }
 }
 
