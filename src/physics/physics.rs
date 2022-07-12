@@ -44,46 +44,61 @@ pub fn apply_velocity (
             // TODO: Get list of possible voxels we could collide with sorted by distance squared
             // TODO: HEY WAIT A MINUTE: Isn't that the same as creating a broadphase thingy???? kinda??? do we even need that???? me dunno...
 
-            let mut remaining_time = 1.0;
+            //let mut remaining_time
 
-            while remaining_time > 0.0 {
+            
+            let mut full_time = 1.0;
+
+            while full_time > 0.0 {
                 //println!("position: {}", transform.translation);
                 println!("velocity: {}", **velocity);
-                let mut modified_velocity = **velocity * time.delta_seconds() * remaining_time;
+                let mut modified_velocity = **velocity * time.delta_seconds() * full_time;
                 let positions = loaded_chunks.broadphase(&aabb, &transform.translation, &modified_velocity);
-                if positions.len() == 0 {
-                    break
-                }
-                //let mut collision_time = 0.0;
+                //if positions.len() == 0 {
+                //    break
+                //}
+
+                let mut collision_time = 1.0;
                 //let mut modified_velocity = **velocity;
 
                 for (position, _distance) in positions {
-                    remaining_time = aabb.compare_swept(transform.translation, modified_velocity, BLOCK_SIZE, position);
-                    println!("remaining time: {}", remaining_time);
+                    collision_time = aabb.compare_swept(transform.translation, modified_velocity, BLOCK_SIZE, position);
+                    println!("collision time: {}", collision_time);
                     // 1 means no collision, anything lower is a collision.
-                    if remaining_time < 1.0 {
+                    if collision_time < 1.0 {
                         break
                     }
                 }
 
-                if remaining_time < 1.0 {
-                    (remaining_time, modified_velocity) = aabb.response_slide(&mut transform.translation, &modified_velocity, remaining_time);
+                full_time -= collision_time;
+
+                //if collision_time == 1.0 {
+                //    break
+                //}
+
+                if collision_time < 1.0 {
+                    let mut remaining_time = 0.0;
+                    (remaining_time, modified_velocity) = aabb.response_slide(&mut transform.translation, &modified_velocity, collision_time);
                     //println!("modified velocity be: {}", modified_velocity);
-                    //println!("time is: {}", remaining_time);
+                    println!("full time: {}", full_time);
                     //println!("UH OH: {}", 1.0 / remaining_time);
-                    if remaining_time > 0.0 {
-                        **velocity = modified_velocity * (1.0 / time.delta_seconds()) * (1.0 / remaining_time);
+                    if full_time > 0.0 {
+                        **velocity = modified_velocity * (1.0 / time.delta_seconds()) * (1.0 / full_time);
                     } else {
                         **velocity = Vec3::default();
                     }
-                    
                 }
+                println!("modified_velocity: {}", modified_velocity);
+                transform.translation += modified_velocity;
+                //if **velocity
             }
+            
         }
-        //else {
+        
+        else {
             //println!("VELOCITY IS: {}", **velocity);
             transform.translation += **velocity * time.delta_seconds();
-        //}
+        }
     }
 }
 
